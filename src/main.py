@@ -262,10 +262,6 @@ class RouletteApp(tk.Tk):
                 frame.update_theme(palette)
 
     def update_widget_colors(self, widget: tk.Widget, palette: dict) -> None:
-        if isinstance(widget, ttk.Widget):
-            for child in widget.winfo_children():
-                self.update_widget_colors(child, palette)
-            return
         if isinstance(widget, (tk.Frame, tk.LabelFrame, tk.Toplevel)):
             widget.configure(bg=palette["bg"])
         elif isinstance(widget, tk.Label):
