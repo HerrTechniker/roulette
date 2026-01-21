@@ -4,6 +4,7 @@ import os
 import random
 import hashlib
 import math
+import platform
 import tkinter as tk
 from dataclasses import dataclass
 from tkinter import messagebox, ttk
@@ -206,6 +207,7 @@ class RouletteApp(tk.Tk):
             frame.grid(row=0, column=0, sticky="nsew")
             self.frames[frame_class.__name__] = frame
 
+        self.create_menu()
         self.show_frame("LoginFrame")
         self.apply_theme(self.theme_var.get())
 
@@ -225,6 +227,33 @@ class RouletteApp(tk.Tk):
     def save_config(self) -> None:
         save_json(CONFIG_FILE, self.config)
 
+    def create_menu(self) -> None:
+        menu = tk.Menu(self)
+        settings_menu = tk.Menu(menu, tearoff=0)
+        settings_menu.add_command(label="Einstellungen", command=self.open_settings)
+        menu.add_cascade(label="Menü", menu=settings_menu)
+        self.config(menu=menu)
+
+    def open_settings(self) -> None:
+        settings = tk.Toplevel(self)
+        settings.title("Einstellungen")
+        settings.resizable(False, False)
+        settings.geometry("300x220")
+        tk.Label(settings, text="Design", font=("Helvetica", 12, "bold")).pack(pady=10)
+
+        theme_frame = tk.Frame(settings)
+        theme_frame.pack(pady=5)
+        for theme_name, label in (("system", "System"), ("light", "Hell"), ("dark", "Dunkel")):
+            tk.Radiobutton(
+                theme_frame,
+                text=label,
+                value=theme_name,
+                variable=self.theme_var,
+                command=self.on_theme_change,
+            ).pack(anchor="w")
+
+        tk.Button(settings, text="Schließen", command=settings.destroy).pack(pady=10)
+        self.update_widget_colors(settings, self.get_palette(self.theme_var.get()))
     def add_theme_selector(self, parent: tk.Widget) -> None:
         bar = tk.Frame(parent)
         bar.pack(fill="x", pady=5)
@@ -245,6 +274,43 @@ class RouletteApp(tk.Tk):
         self.save_config()
         self.apply_theme(new_theme)
 
+    def get_system_theme(self) -> str:
+        system = platform.system()
+        if system == "Windows":
+            try:
+                import winreg
+
+                with winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER,
+                    r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                ) as key:
+                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+                    return "dark" if value == 0 else "light"
+            except OSError:
+                return "light"
+        if system == "Darwin":
+            try:
+                import subprocess
+
+                result = subprocess.run(
+                    ["defaults", "read", "-g", "AppleInterfaceStyle"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                return "dark" if "Dark" in result.stdout else "light"
+            except OSError:
+                return "light"
+        return "light"
+
+    def get_palette(self, theme_name: str) -> dict:
+        if theme_name == "system":
+            resolved = self.get_system_theme()
+            return THEMES[resolved]
+        return THEMES[theme_name]
+
+    def apply_theme(self, theme_name: str) -> None:
+        palette = self.get_palette(theme_name)
     def apply_theme(self, theme_name: str) -> None:
         if theme_name == "system":
             palette = self.system_palette
@@ -255,6 +321,24 @@ class RouletteApp(tk.Tk):
         style.configure("TLabel", background=palette["bg"], foreground=palette["text"])
         style.configure("TFrame", background=palette["bg"])
         style.configure("TButton", background=palette["panel"], foreground=palette["text"])
+        style.map(
+            "TButton",
+            background=[("active", palette["accent"])],
+            foreground=[("active", palette["text"])],
+        )
+        style.configure(
+            "TCombobox",
+            fieldbackground=palette["panel"],
+            background=palette["panel"],
+            foreground=palette["text"],
+            arrowcolor=palette["text"],
+        )
+        style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", palette["panel"])],
+            foreground=[("readonly", palette["text"])],
+            background=[("readonly", palette["panel"])],
+        )
         style.configure("TCombobox", fieldbackground=palette["panel"], foreground=palette["text"])
         for frame in self.frames.values():
             self.update_widget_colors(frame, palette)
@@ -262,6 +346,10 @@ class RouletteApp(tk.Tk):
                 frame.update_theme(palette)
 
     def update_widget_colors(self, widget: tk.Widget, palette: dict) -> None:
+        if isinstance(widget, ttk.Widget):
+            for child in widget.winfo_children():
+                self.update_widget_colors(child, palette)
+            return
         if isinstance(widget, (tk.Frame, tk.LabelFrame, tk.Toplevel)):
             widget.configure(bg=palette["bg"])
         elif isinstance(widget, tk.Label):

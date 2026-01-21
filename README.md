@@ -10,7 +10,7 @@ Ein American-Roulette-Spiel (mit 0 und 00) in Python mit grafischer Oberfläche 
 - Innenfelder (min. 0,50€) und Außenfelder (min. 5€)
 - Gewinnübersicht mit Erklärung der Felder
 - Bewegliches Rouletterad (animierte Auswahl)
-- Umschaltbares UI-Design: Hell, Dunkel oder System
+- Umschaltbares UI-Design: Hell, Dunkel oder System (über Menü → Einstellungen)
 - Persistente Speicherung in JSON (`data/`)
 
 ## Voraussetzungen (Requirements)
@@ -47,6 +47,8 @@ Die Standard-Konfiguration liegt in `data/config.json`:
   "ui_theme": "system"
 }
 ```
+
+**System-Design:** verwendet automatisch den Dark-/Light-Mode des Betriebssystems.
 
 ## Gewinnübersicht & Feld-Erklärung
 
