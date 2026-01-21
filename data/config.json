@@ -1,0 +1,5 @@
+{
+  "default_start_balance": 100.0,
+  "admin_users": ["admin"],
+  "ui_theme": "system"
+}
