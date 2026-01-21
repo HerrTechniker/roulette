@@ -185,6 +185,14 @@ class RouletteApp(tk.Tk):
         if "ui_theme" not in self.config:
             self.config["ui_theme"] = "system"
             save_json(CONFIG_FILE, self.config)
+        self.system_palette = {
+            "bg": self.cget("bg"),
+            "panel": self.cget("bg"),
+            "text": "black",
+            "accent": "#1565c0",
+            "canvas": "white",
+            "wheel": "#1b5e20",
+        }
         self.current_user: Optional[str] = None
         self.current_bets: List[Bet] = []
         self.result_number: Optional[str] = None
@@ -246,6 +254,19 @@ class RouletteApp(tk.Tk):
 
         tk.Button(settings, text="Schließen", command=settings.destroy).pack(pady=10)
         self.update_widget_colors(settings, self.get_palette(self.theme_var.get()))
+    def add_theme_selector(self, parent: tk.Widget) -> None:
+        bar = tk.Frame(parent)
+        bar.pack(fill="x", pady=5)
+        tk.Label(bar, text="Design:").pack(side="left", padx=5)
+        selector = ttk.Combobox(
+            bar,
+            values=["system", "light", "dark"],
+            textvariable=self.theme_var,
+            state="readonly",
+            width=10,
+        )
+        selector.pack(side="left")
+        selector.bind("<<ComboboxSelected>>", lambda _event: self.on_theme_change())
 
     def on_theme_change(self) -> None:
         new_theme = self.theme_var.get()
@@ -290,6 +311,11 @@ class RouletteApp(tk.Tk):
 
     def apply_theme(self, theme_name: str) -> None:
         palette = self.get_palette(theme_name)
+    def apply_theme(self, theme_name: str) -> None:
+        if theme_name == "system":
+            palette = self.system_palette
+        else:
+            palette = THEMES[theme_name]
         self.configure(bg=palette["bg"])
         style = ttk.Style(self)
         style.configure("TLabel", background=palette["bg"], foreground=palette["text"])
@@ -313,6 +339,7 @@ class RouletteApp(tk.Tk):
             foreground=[("readonly", palette["text"])],
             background=[("readonly", palette["panel"])],
         )
+        style.configure("TCombobox", fieldbackground=palette["panel"], foreground=palette["text"])
         for frame in self.frames.values():
             self.update_widget_colors(frame, palette)
             if isinstance(frame, GameFrame):
@@ -347,6 +374,7 @@ class LoginFrame(tk.Frame):
         self.app = app
 
         tk.Label(self, text="American Roulette", font=("Helvetica", 20, "bold")).pack(pady=20)
+        app.add_theme_selector(self)
 
         form = tk.Frame(self)
         form.pack(pady=10)
@@ -400,6 +428,7 @@ class RegisterFrame(tk.Frame):
         self.app = app
 
         tk.Label(self, text="Registrieren", font=("Helvetica", 18, "bold")).pack(pady=20)
+        app.add_theme_selector(self)
 
         form = tk.Frame(self)
         form.pack(pady=10)
@@ -440,6 +469,7 @@ class AdminFrame(tk.Frame):
         self.app = app
 
         tk.Label(self, text="Admin-Bereich", font=("Helvetica", 18, "bold")).pack(pady=20)
+        app.add_theme_selector(self)
         self.balance_var = tk.StringVar()
 
         form = tk.Frame(self)
@@ -480,6 +510,7 @@ class OverviewFrame(tk.Frame):
         super().__init__(parent)
         self.app = app
         tk.Label(self, text="Gewinnübersicht & Feld-Erklärung", font=("Helvetica", 16, "bold")).pack(pady=15)
+        app.add_theme_selector(self)
         text = (
             "Innenfelder (min 0,50€)\n"
             "- Straight (eine Zahl, inkl. 0/00): Auszahlung 35:1\n"
@@ -519,6 +550,7 @@ class GameFrame(tk.Frame):
         tk.Label(header, textvariable=self.user_var, font=("Helvetica", 14, "bold")).pack(side="left", padx=10)
         tk.Label(header, textvariable=self.balance_var, font=("Helvetica", 14)).pack(side="left", padx=10)
         tk.Button(header, text="Logout", command=self.logout).pack(side="right", padx=10)
+        self.app.add_theme_selector(header)
 
         main = tk.Frame(self)
         main.pack(fill="both", expand=True)
